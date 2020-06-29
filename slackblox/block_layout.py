@@ -1,13 +1,9 @@
-from slackblox.block_element import BlockElement
-from slackblox.composition import (
-    TextObject,
-    ConfirmationDialog,
-    set_from_object_or_string
-)
+import json
+from slackblox.composition import set_text_from_object_or_string
 import slackblox.constants as c
 
 
-class BlockLayout():
+class _BlockLayout():
     def __init__(self, block_id=None):
         """View layout block documentation here https://api.slack.com/reference/block-kit/blocks"""
         self.payload = {}
@@ -26,15 +22,8 @@ class BlockLayout():
             self.block_id = block_id
             self.payload["block_id"] = self.block_id
 
-    def add(self, element: BlockElement):
-        if element.type in c.LAYOUT_ELEMENTS[self.type]:
-            self.payload.update(element.payload)
-        else:
-            err = "error here"
-            return err
 
-
-class ActionsLayout(BlockLayout):
+class ActionsLayout(_BlockLayout):
     def __init__(self, elements, block_id=None):
         """A block that is used to hold interactive elements. https://api.slack.com/reference/block-kit/blocks#actions
 
@@ -45,6 +34,7 @@ class ActionsLayout(BlockLayout):
         """
         self.type = "actions"
         super().__init__(block_id)
+        # TODO - Add this to constants.py
         # There is a maximum of 5 elements in each action block.
         if len(elements) > 0 and len(elements) <= 5:
             self.payload["elements"] = []
@@ -55,7 +45,7 @@ class ActionsLayout(BlockLayout):
                 "Elements expected.  There is a maximum of 5 elements in each action block.")
 
 
-class ContextLayout(BlockLayout):
+class ContextLayout(_BlockLayout):
     def __init__(self, elements, block_id=None):
         """Displays message context, which can include both images and text. https://api.slack.com/reference/block-kit/blocks#context
 
@@ -78,7 +68,7 @@ class ContextLayout(BlockLayout):
                 "Elements array expected. Image or TextObject, 10 objects or less.")
 
 
-class DividerLayout(BlockLayout):
+class DividerLayout(_BlockLayout):
     def __init__(self, block_id=None):
         """A content divider, like an <hr>, to split up different blocks inside of a message. https://api.slack.com/reference/block-kit/blocks#divider
 
@@ -89,7 +79,7 @@ class DividerLayout(BlockLayout):
         super().__init__(block_id)
 
 
-class FileLayout(BlockLayout):
+class FileLayout(_BlockLayout):
     def __init__(self, external_id, source, block_id=None):
         """Displays a remote file. https://api.slack.com/reference/block-kit/blocks#file
 
@@ -108,7 +98,7 @@ class FileLayout(BlockLayout):
         self.payload["source"] = self.source
 
 
-class ImageLayout(BlockLayout):
+class ImageLayout(_BlockLayout):
     def __init__(self, image_url, alt_text, title=None, block_id=None):
         """A simple image block. https://api.slack.com/reference/block-kit/blocks#image
 
@@ -130,11 +120,11 @@ class ImageLayout(BlockLayout):
         self.alt_text = alt_text
         self.payload["alt_text"] = self.alt_text
         # title - TextObject. Maximum length for the text in this field is 2000 characters.
-        self.title = set_from_object_or_string(title, "plain_text")
+        self.title = set_text_from_object_or_string(title, "plain_text")
         self.payload["title"] = self.title
 
 
-class InputLayout(BlockLayout):
+class InputLayout(_BlockLayout):
     def __init__(self, label, element, block_id=None, hint=None, optional=False):
         """A block that collects information from users - it can hold a plain-text input element, a select menu element, 
         a multi-select menu element, or a datepicker. https://api.slack.com/reference/block-kit/blocks#input
@@ -152,20 +142,20 @@ class InputLayout(BlockLayout):
         """
         self.type = "input"
         super().__init__(block_id)
-        self.label = set_from_object_or_string(label)
+        self.label = set_text_from_object_or_string(label)
         self.payload["label"] = self.label
         self.element = element
         self.payload["element"] = self.element.payload
         if hint is not None:
             # TODO - Maximum length for the text in this field is 2000 characters.
-            self.hint = set_from_object_or_string(hint)
+            self.hint = set_text_from_object_or_string(hint)
             self.payload["hint"] = self.hint
         if optional is not False:
             self.optional = optional
             self.payload["optional"] = self.optional
 
 
-class SectionLayout(BlockLayout):
+class SectionLayout(_BlockLayout):
     def __init__(self, text=None, block_id=None, fields=None, accessory=None):
         """Creates a ``section`` Layout Block.  Please see Slack Block Kit documentation for more details. https://api.slack.com/reference/block-kit/blocks#section
 
@@ -185,9 +175,17 @@ class SectionLayout(BlockLayout):
         if text is None and fields is None:
             raise ValueError("Must supply either 'text' or 'fields' object")
         # Maximum length for the text in this field is 3000 characters.
-        self.text = set_from_object_or_string(text)
-        self.payload["text"] = self.text
+        if text is not None:
+            self.text = set_text_from_object_or_string(text)
+            self.payload["text"] = self.text
         # TODO - FIELDS
         # Maximum number of items is 10.
         # Maximum length for the text in each item is 2000 characters.
-        # TODO - accessory
+        if fields is not None and len(fields) <= 10:
+            self.fields = [set_text_from_object_or_string(field) for field in fields]
+            self.payload["fields"] = []
+            for field in self.fields:
+                self.payload["fields"].append(field)
+        if accessory is not None:
+            self.accessory = accessory.payload
+            self.payload["accessory"] = self.accessory

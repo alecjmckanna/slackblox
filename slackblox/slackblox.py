@@ -1,10 +1,5 @@
 import json
-from slackblox.block_layout import BlockLayout
-from slackblox.composition import (
-    TextObject,
-    ConfirmationDialog,
-    set_from_object_or_string
-)
+from slackblox.composition import set_text_from_object_or_string
 import slackblox.constants as c
 
 
@@ -31,11 +26,11 @@ class Slackblox():
     def __repr__(self):
         return json.dumps(self.payload)
 
-    def add(self, layout: BlockLayout):
+    def add(self, layout):
         """Add a Block to the current surface.
 
         :param layout: Block layout to be appended to the block array.
-        :type layout: BlockLayout
+        :type layout: _BlockLayout
         :raises err: Block cannot be added to this surface type.
         """
         if layout.type in c.SURFACE_LAYOUTS[self.type]:
@@ -54,7 +49,7 @@ class SlackbloxModal(Slackblox):
         :param **kwargs: Used to include additional keys in the payload.
         """
         self.type = "modal"
-        self.title = set_from_object_or_string(title)
+        self.title = set_text_from_object_or_string(title)
         self.surface = {}
         self.surface["type"] = "modal"
         self.surface["title"] = self.title
